@@ -1,0 +1,34 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form"
+         xmlns:i="jelly:fmt" xmlns:p="/lib/hudson/project">
+    <st:adjunct includes="io.jenkins.plugins.jquery3"/>
+    <st:adjunct includes="net.uaznia.lukanus.hudson.plugins.gitparameter.script"/>
+    <st:adjunct includes="net.uaznia.lukanus.hudson.plugins.gitparameter.gitParameterSelect"/>
+    <j:set var="divId" value="${it.divUUID}" scope="parent"/>
+    <j:set var="escapeEntryTitleAndDescription" value="false"/>
+    <f:entry title="${h.escape(it.name)}" description="${it.formattedDescription}">
+        <div name="parameter" id="${divId}" data-default-value="${it.defaultValue}" data-selected-value="${it.selectedValue}">
+            <st:adjunct includes="lib.form.select.select"/>
+            <input type="hidden" name="name" value="${it.name}"/>
+            <select name="value" class="gitParameterSelect" size="${it.listSize}" style="min-width: 200px; font-family: monospace;" id="gitParameterSelect"
+                    fillUrl="${h.getCurrentDescriptorByNameUrl()}/${it.descriptor.descriptorUrl}/fillValueItems?param=${h.urlEncode(it.name)}" divId="${divId}">
+                <option value="">${%retrieving.references}</option>
+            </select>
+            <j:if test="${it.quickFilterEnabled}">
+                <input class='git_parameter_quick_filter' type='text' value='' name='quickFilter' placeholder='Filter'
+                       style="vertical-align: top" id="filter"/>
+            </j:if>
+            <script type="text/javascript">
+                var parentDiv = jQuery('#${divId}');
+                new GitParameter.QuickFilter(parentDiv);
+            </script>
+        </div>
+        <j:if test="${it.parameterType eq 'PT_REVISION' and it.descriptor.showNeedToCloneInformation}">
+            <div id="git_parameter_info_${divId}">${%needs.to.clone}</div>
+        </j:if>
+        <div id="git_parameter_errors_${divId}" style="display:none">
+            <ul id="git_parameter_errors_ul_${divId}"/>
+        </div>
+    </f:entry>
+</j:jelly>
