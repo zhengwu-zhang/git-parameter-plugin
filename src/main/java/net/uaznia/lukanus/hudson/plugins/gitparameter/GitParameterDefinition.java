@@ -33,25 +33,17 @@ import hudson.plugins.git.GitException;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.Revision;
 import hudson.util.FormValidation;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
 import jenkins.model.Jenkins;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -317,8 +309,11 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
                         }
 
                         if (isTagType(type)) {
-                            Set<String> tagSet = getTag(gitClient, gitUrl);
-                            sortAndPutToParam(tagSet, paramList);
+                            synchronized (GitParameterDefinition.class) {
+                                Set<String> tagSet =
+                                        getTag(jobWrapper, git, paramList, environment, repository, remoteURL, gitUrl);
+                                sortByTimeAndPutToParam(tagSet, paramList);
+                            }
                         }
 
                         if (isBranchType(type)) {
@@ -382,23 +377,42 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
         return !repositoryNamePattern.matcher(gitUrl).find();
     }
 
-    private Set<String> getTag(GitClient gitClient, String gitUrl) throws InterruptedException {
+    private Set<String> getTag(
+            JobWrapper jobWrapper,
+            GitSCM git,
+            Map<String, String> paramList,
+            EnvVars environment,
+            RemoteConfig repository,
+            URIish remoteURL,
+            String gitUrl)
+            throws IOException, InterruptedException {
+
         Set<String> tagSet = new HashSet<>();
+        boolean isRepoScm = RepoSCM.isRepoSCM(repository.getName());
+        FilePathWrapper workspace = getWorkspace(jobWrapper, isRepoScm);
+
+        GitClient gitClient = getGitClient(jobWrapper, workspace, git, environment);
+        initWorkspace(workspace, gitClient, remoteURL);
+        FetchCommand fetch = gitClient.fetch_().prune().from(remoteURL, repository.getFetchRefSpecs());
+        fetch.execute();
+
         try {
             Map<String, ObjectId> tags = gitClient.getRemoteReferences(gitUrl, tagFilter, false, true);
 
             for (Map.Entry<String, ObjectId> tagEntry : tags.entrySet()) {
-                tagSet.add(mapTagWithRevision(tagEntry.getValue(), gitClient) + " " + tagEntry.getKey().replaceFirst(REFS_TAGS_PATTERN, ""));
+                tagSet.add(mapTagWithRevision(tagEntry.getValue(), gitClient) + " --> "
+                        + tagEntry.getKey().replaceFirst(REFS_TAGS_PATTERN, ""));
             }
         } catch (GitException e) {
             LOGGER.log(Level.WARNING, getCustomJobName() + " " + Messages.GitParameterDefinition_getTag(), e);
         }
+        workspace.delete();
         return tagSet;
     }
 
     private String mapTagWithRevision(ObjectId objectId, GitClient gitClient) {
-        Revision revision = new Revision(objectId);
         RevisionInfoFactory revisionInfoFactory = new RevisionInfoFactory(gitClient, branch);
+        Revision revision = new Revision(objectId);
 
         return revisionInfoFactory.mapPrettyRevisionWithTag(revision, gitClient);
     }
@@ -483,9 +497,16 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
         workspace.delete();
     }
 
-
     private void sortAndPutToParam(Set<String> setElement, Map<String, String> paramList) {
         List<String> sorted = sort(setElement);
+
+        for (String element : sorted) {
+            paramList.put(element, element);
+        }
+    }
+
+    private void sortByTimeAndPutToParam(Set<String> setElement, Map<String, String> paramList) {
+        List<String> sorted = sortByTime(setElement);
 
         for (String element : sorted) {
             paramList.put(element, element);
@@ -495,13 +516,18 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
     private ArrayList<String> sort(Set<String> toSort) {
         ArrayList<String> sorted;
 
-        if (this.getSortMode().getIsSorting()) {
+        if (this.getSortMode().getIsSortByName()) {
             sorted = sortByName(toSort);
             if (this.getSortMode().getIsDescending()) {
                 Collections.reverse(sorted);
             }
+        } else if (this.getSortMode().getIsSortByTime()) {
+            sorted = sortByTime(toSort);
         } else {
             sorted = new ArrayList<>(toSort);
+            if (this.getSortMode().getIsTimeDescending()) {
+                Collections.reverse(sorted);
+            }
         }
         return sorted;
     }
@@ -602,11 +628,29 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
     private GitClient getGitClient(
             final JobWrapper jobWrapper, FilePathWrapper workspace, GitSCM git, EnvVars environment)
             throws IOException, InterruptedException {
-        Run build = new Run(jobWrapper.getJob(), System.currentTimeMillis()) {
-        };
+        Run build = new Run(jobWrapper.getJob(), System.currentTimeMillis()) {};
 
         return git.createClient(
                 TaskListener.NULL, environment, build, workspace != null ? workspace.getFilePath() : null);
+    }
+
+    public ArrayList<String> sortByTime(Set<String> set) {
+        // Define the date format according to your timestamp format (yyyy-MM-dd HH:mm)
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        ArrayList<String> sortedList = new ArrayList<>(set);
+
+        // Sort the list based on the timestamp
+        sortedList.sort(Comparator.comparing(str -> {
+            try {
+                // Extract the timestamp substring and parse it to a Date object
+                String dateString = str.substring(0, 16); // Assuming timestamp is the first 16 characters
+                return sdf.parse(dateString);
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        }));
+
+        return sortedList;
     }
 
     public ArrayList<String> sortByName(Set<String> set) {
@@ -614,7 +658,7 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
         ArrayList<String> tags = new ArrayList<>(set);
 
         if (getSortMode().getIsUsingSmartSort()) {
-            Collections.sort(tags, new SmartNumberStringComparer());
+            tags.sort(new SmartNumberStringComparer());
         } else {
             Collections.sort(tags);
         }

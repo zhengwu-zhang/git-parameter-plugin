@@ -55,15 +55,11 @@ public class RevisionInfoFactory {
         return revisionInfoList;
     }
 
-
-    public String mapPrettyRevisionWithTag(Revision revision, GitClient gitClient) throws GitException {
+    public String mapPrettyRevisionWithTag(Revision revision, GitClient gitClient) {
         String shortSha1 = revision.getSha1String().substring(0, 8);
-
         List<String> raw;
-
         try {
             raw = gitClient.showRevision(revision.getSha1());
-
         } catch (GitException | InterruptedException e1) {
             LOGGER.log(Level.SEVERE, Messages.GitParameterDefinition_unexpectedError(), e1);
             return shortSha1;
@@ -81,7 +77,7 @@ public class RevisionInfoFactory {
             LocalDateTime date =
                     LocalDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(timestamp) * 1000), ZoneId.of(zone));
             String stringDate = date.format(DATE_FORMAT);
-            return StringUtils.join(new Object[] {stringDate, shortSha1, author, commitMessage}, " ")
+            return StringUtils.join(new Object[] {stringDate, author, commitMessage}, " ")
                     .trim();
         }
 
@@ -89,15 +85,13 @@ public class RevisionInfoFactory {
         if (matcher.find()) {
             String author = matcher.group(1);
             String date = matcher.group(2);
-            return StringUtils.join(new Object[] {date, shortSha1, author, commitMessage}, " ")
+            return StringUtils.join(new Object[] {date, author, commitMessage}, " ")
                     .trim();
         }
 
         LOGGER.log(Level.WARNING, Messages.GitParameterDefinition_notFindAuthorPattern(authorLine));
         return shortSha1;
-
     }
-
 
     private String prettyRevisionInfo(Revision revision) {
         String shortSha1 = revision.getSha1String().substring(0, 8);

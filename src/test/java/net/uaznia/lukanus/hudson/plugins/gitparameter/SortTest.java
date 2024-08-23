@@ -89,14 +89,17 @@ public class SortTest {
         assertFalse(SortMode.ASCENDING_SMART.getIsDescending());
         assertTrue(SortMode.DESCENDING.getIsDescending());
         assertTrue(SortMode.DESCENDING_SMART.getIsDescending());
+        assertTrue(SortMode.TIME_DESCENDING.getIsTimeDescending());
     }
 
     @Test
     public void testSortMode_getIsSorting() {
-        assertFalse(SortMode.NONE.getIsSorting());
-        assertTrue(SortMode.ASCENDING.getIsSorting());
-        assertTrue(SortMode.ASCENDING_SMART.getIsSorting());
-        assertTrue(SortMode.DESCENDING.getIsSorting());
-        assertTrue(SortMode.DESCENDING_SMART.getIsSorting());
+        assertFalse(SortMode.NONE.getIsSortByName());
+        assertTrue(SortMode.ASCENDING.getIsSortByName());
+        assertTrue(SortMode.ASCENDING_SMART.getIsSortByName());
+        assertTrue(SortMode.DESCENDING.getIsSortByName());
+        assertTrue(SortMode.DESCENDING_SMART.getIsSortByName());
+        assertTrue(SortMode.TIME.getIsSortByTime());
+        assertTrue(SortMode.TIME_DESCENDING.getIsSortByTime());
     }
 }

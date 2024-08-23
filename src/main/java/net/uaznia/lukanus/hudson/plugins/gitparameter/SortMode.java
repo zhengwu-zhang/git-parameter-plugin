@@ -5,7 +5,9 @@ enum SortMode {
     ASCENDING_SMART,
     DESCENDING_SMART,
     ASCENDING,
-    DESCENDING;
+    DESCENDING,
+    TIME_DESCENDING,
+    TIME;
 
     public boolean getIsUsingSmartSort() {
         return this == ASCENDING_SMART || this == DESCENDING_SMART;
@@ -15,7 +17,15 @@ enum SortMode {
         return this == DESCENDING || this == DESCENDING_SMART;
     }
 
-    public boolean getIsSorting() {
-        return this != NONE;
+    public boolean getIsSortByName() {
+        return this != NONE && this != TIME;
+    }
+
+    public boolean getIsSortByTime() {
+        return this == TIME || this == TIME_DESCENDING;
+    }
+
+    public boolean getIsTimeDescending() {
+        return this == TIME_DESCENDING;
     }
 }
