@@ -77,7 +77,7 @@ public class RevisionInfoFactory {
             LocalDateTime date =
                     LocalDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(timestamp) * 1000), ZoneId.of(zone));
             String stringDate = date.format(DATE_FORMAT);
-            return StringUtils.join(new Object[] {stringDate, author, commitMessage}, " ")
+            return StringUtils.join(new Object[] {stringDate, shortSha1, author, commitMessage}, " ")
                     .trim();
         }
 
@@ -85,7 +85,7 @@ public class RevisionInfoFactory {
         if (matcher.find()) {
             String author = matcher.group(1);
             String date = matcher.group(2);
-            return StringUtils.join(new Object[] {date, author, commitMessage}, " ")
+            return StringUtils.join(new Object[] {date, shortSha1, author, commitMessage}, " ")
                     .trim();
         }
 

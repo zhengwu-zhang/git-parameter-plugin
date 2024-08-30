@@ -506,7 +506,7 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
     }
 
     private void sortByTimeAndPutToParam(Set<String> setElement, Map<String, String> paramList) {
-        List<String> sorted = sortByTime(setElement);
+        List<String> sorted = sort(setElement);
 
         for (String element : sorted) {
             paramList.put(element, element);
@@ -523,6 +523,7 @@ public class GitParameterDefinition extends ParameterDefinition implements Compa
             }
         } else if (this.getSortMode().getIsSortByTime()) {
             sorted = sortByTime(toSort);
+            if (this.getSortMode().getIsTimeDescending()) Collections.reverse(sorted);
         } else {
             sorted = new ArrayList<>(toSort);
             if (this.getSortMode().getIsTimeDescending()) {

@@ -18,7 +18,7 @@ enum SortMode {
     }
 
     public boolean getIsSortByName() {
-        return this != NONE && this != TIME;
+        return this != NONE && !getIsSortByTime();
     }
 
     public boolean getIsSortByTime() {

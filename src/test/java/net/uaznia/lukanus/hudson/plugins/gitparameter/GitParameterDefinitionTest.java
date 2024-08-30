@@ -102,7 +102,7 @@ public class GitParameterDefinitionTest {
                 "testBranch",
                 ".*",
                 "*",
-                SortMode.NONE,
+                SortMode.TIME,
                 SelectedValue.NONE,
                 null,
                 false);
@@ -132,7 +132,7 @@ public class GitParameterDefinitionTest {
                 "testBranch",
                 ".*",
                 "*",
-                SortMode.DESCENDING_SMART,
+                SortMode.TIME_DESCENDING,
                 SelectedValue.NONE,
                 null,
                 false);
